@@ -1,0 +1,8 @@
+[package]
+name = "rshell"
+version = "0.1.0"
+authors = ["fransiscofernandezcastano <francisco.castano@datastax.com>"]
+
+[dependencies]
+nix = "0.10.0"
+rustyline = "1.0.0"

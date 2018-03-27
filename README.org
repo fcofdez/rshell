@@ -1,0 +1,4 @@
+* RShell
+** Minimal unix shell client writen in Rust
+
+Just to learn rust.
