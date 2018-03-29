@@ -1,4 +1,8 @@
 * RShell
 ** Minimal unix shell client writen in Rust
-
-Just to learn rust.
+   Just to learn rust.
+** Pending
+*** TODO Redirection
+*** TODO Install signal handlers
+*** TODO Pipes
+*** TODO Background - Foreground

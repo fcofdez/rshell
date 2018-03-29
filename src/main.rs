@@ -5,12 +5,13 @@ extern crate error_chain;
 extern crate nix;
 extern crate rustyline;
 
-use nix::sys::wait::waitpid;
+use nix::sys::wait::{waitpid, WaitPidFlag};
 use nix::unistd::{execvp, fork, ForkResult};
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 
 mod parser;
+mod shell;
 mod errors {
     // Create the Error, ErrorKind, ResultExt, and Result types
     error_chain!{}
@@ -28,14 +29,14 @@ fn rshell_loop() -> Result<()> {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(&line);
-                let cmd = parser::RCommand::new(&line);
+                let cmd = parser::rcommand::RCommand::new(&line);
                 match fork() {
                     Ok(ForkResult::Parent { child, .. }) => {
-                        let result = waitpid(child, None);
+                        let result = waitpid(child, Some(WaitPidFlag::WUNTRACED));
                         println!("{:?}", result);
                     }
                     Ok(ForkResult::Child) => {
-                        let result = execvp(&cmd.bin, &cmd.args);
+                        let result = execvp(&cmd.bin(), &cmd.cargs());
                         println!("{:?}", result);
                         ();
                     }
