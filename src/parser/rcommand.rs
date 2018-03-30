@@ -8,7 +8,7 @@ pub struct RCommand {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Error {
-    InvalidCommand
+    InvalidCommand,
 }
 
 use self::Error::*;
