@@ -1,39 +1,47 @@
 use std::ffi::CString;
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct RCommand {
-    args: Vec<CString>,
+    args: Vec<String>,
     pub background: bool,
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum Error {
+    InvalidCommand
+}
+
+use self::Error::*;
+
 impl RCommand {
-    pub fn new(buffer: &String) -> RCommand {
-        let mut cmd_vec: Vec<CString> = buffer
-            .split_whitespace()
-            .map(|s| CString::new(s).unwrap())
-            .collect();
+    pub fn new(buffer: &String) -> Result<RCommand, Error> {
+        if buffer.is_empty() {
+            return Err(InvalidCommand);
+        }
+        let mut cmd_vec: Vec<String> = buffer.split_whitespace().map(|s| String::from(s)).collect();
         let background = match cmd_vec.last() {
-            Some(elem) => {
-                let el = elem.clone().into_string().unwrap();
-                el == "&"
-            }
+            Some(elem) => elem == "&",
             None => false,
         };
 
         if background {
             cmd_vec.pop();
         }
-        RCommand {
+        Ok(RCommand {
             args: cmd_vec,
             background: background,
-        }
+        })
     }
 
     pub fn bin(&self) -> CString {
-        self.args[0].clone()
+        CString::new(self.args[0].clone()).unwrap()
     }
 
-    pub fn cargs(&self) -> &Vec<CString> {
-        &self.args
+    pub fn cargs(&self) -> Vec<CString> {
+        self.args
+            .iter()
+            .map(|s| CString::new(&**s).unwrap())
+            .collect()
     }
 }
 
@@ -43,20 +51,21 @@ mod tests {
 
     #[test]
     fn background_parse_test() {
-        let rcommand_with_background = RCommand::new(&"ls -lah &".to_string());
-        let rcommand_without_background = RCommand::new(&"ls -lah".to_string());
+        let rcommand_with_background = RCommand::new(&"ls -lah &".to_string()).unwrap();
+        let rcommand_without_background = RCommand::new(&"ls -lah".to_string()).unwrap();
         assert_eq!(rcommand_with_background.background, true);
         assert_eq!(rcommand_without_background.background, false);
     }
 
     #[test]
     fn parse_test() {
-        let rcommand = RCommand::new(&"ls -lah &".to_string());
-        let cmd_args: Vec<String> = rcommand
-            .cargs()
-            .iter()
-            .map(|s| s.clone().into_string().unwrap())
-            .collect();
-        assert_eq!(cmd_args, vec!["ls".to_string(), "-lah".to_string()]);
+        let rcommand = RCommand::new(&"ls -lah &".to_string()).unwrap();
+        assert_eq!(rcommand.args, vec!["ls", "-lah"]);
+    }
+
+    #[test]
+    fn empty_cmd_test() {
+        let rcommand = RCommand::new(&"".to_string());
+        assert_eq!(rcommand, Err(InvalidCommand));
     }
 }
