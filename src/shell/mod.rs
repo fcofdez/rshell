@@ -1,10 +1,10 @@
-use nix::sys::wait::{waitpid, WaitPidFlag};
+use nix::sys::wait::waitpid;
 use nix::unistd::*;
-use rustyline::Editor;
-use rustyline::error::ReadlineError;
 use parser::rcommand::RCommand;
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
-use errors::*;
+use errors::Failures;
 
 pub struct Config<'a> {
     history_path: &'a str,
@@ -33,16 +33,14 @@ impl<'a> Shell<'a> {
         }
     }
 
-    pub fn shell_loop(&mut self) -> Result<()> {
-        self.editor
-            .load_history(&self.config.history_path)
-            .chain_err(|| "error loading history")?;
+    pub fn shell_loop(&mut self) -> Result<(), Failures> {
+        self.editor.load_history(&self.config.history_path)?;
         loop {
             match self.editor.readline(self.config.prompt) {
                 Ok(line) => {
                     self.editor.add_history_entry(&line);
                     let cmd = RCommand::new(&line);
-                    self.fork(&cmd.unwrap());
+                    self.fork(&cmd.unwrap())?;
                 }
                 Err(ReadlineError::Interrupted) => break,
                 Err(ReadlineError::Eof) => break,
@@ -55,7 +53,7 @@ impl<'a> Shell<'a> {
         Ok(())
     }
 
-    fn fork(&self, cmd: &RCommand) -> Result<()> {
+    fn fork(&self, cmd: &RCommand) -> Result<(), Failures> {
         match fork() {
             Ok(ForkResult::Parent { child, .. }) => {
                 let result = waitpid(child, None);
@@ -63,9 +61,9 @@ impl<'a> Shell<'a> {
             }
             Ok(ForkResult::Child) => {
                 if cmd.background {
-                    setpgid(Pid::from_raw(0), Pid::from_raw(0));
+                    setpgid(Pid::from_raw(0), Pid::from_raw(0))?;
                 }
-                execvp(&cmd.bin(), &cmd.cargs()).chain_err(|| "something happened in exec")?;
+                execvp(&cmd.bin(), &cmd.cargs())?;
             }
             Err(_) => println!("Fork failed"),
         }
